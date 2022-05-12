@@ -1,0 +1,4 @@
+# Improving Local Maxima-based Individual Tree Detection using statistically modelled Forest Structure Information (2022)
+This folder contains the code used for data preparation, individual tree detection and result analysis used in the publication. Note that no data is provided due to license and confidentiality issues:
+- __python__: This folder contains code used for input data preparation, individual tree detection and preparation of the tree detection results for analysis. While the data preparation steps are inplemented in Jupyter Notebooks, the individual tree detection is implemented in normal python scripts. See the separate readme for the detection code for more details on the configuration of said code.
+- __r__: This folder conteins a Jupyter Notebook that contains the R code used for the hybrid model and its analysis (note that the code has been cleaned up, removing unnecessary experiments and unused code parts).  

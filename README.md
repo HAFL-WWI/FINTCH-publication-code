@@ -1,2 +1,2 @@
-# FINTCH-publication-code
-Repository with code for publications connected to the FINT-CH project
+# FINT-CH Publications Code
+This repository contains code needed to reproduce results for publications connected to the FINT-CH project. See consult the readme files in the individual publication's folder for details.
