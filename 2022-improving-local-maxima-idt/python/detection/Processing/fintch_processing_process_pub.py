@@ -43,7 +43,7 @@ from queue import Empty
 import logging
 import traceback
 
-import fintch_processing_core_diss
+import fintch_processing_core_pub
 
 def worker(q, work_function, cfg):
     db_connection = psycopg2.connect(host=cfg.get("AP07__db","host"), dbname=cfg.get("AP07__db","dbname"), user=cfg.get("AP07__db","user"), password=cfg.get("AP07__db","password"))
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 
     result_base_path = r"F:\fint-ch\Geodaten\diss\Results"
     log_path = os.path.join(result_base_path, "procesing_log")
-    flaechen_info_path = r"F:\fint-ch\Geodaten\diss\kantone_info_vhm_schweizweit.csv"
+    flaechen_info_path = r"F:\fint-ch\Geodaten\diss\kantone_info.csv"
     reference_plot_path = r"F:\fint-ch\Geodaten\diss\reference_plots.shp" 
     flaeche_id_column = "KANTONSNUM"
 
@@ -250,7 +250,7 @@ if __name__ == "__main__":
 
     db_connection = psycopg2.connect(host=cfg.get("AP07__db","host"), dbname=cfg.get("AP07__db","dbname"), user=cfg.get("AP07__db","user"), password=cfg.get("AP07__db","password"))
     srid = cfg.get("AP07__pyfint","epsg")
-#    fintch_processing_core_diss.create_db_tables(table_schema,table_base_name,table_owner,srid,db_connection)
+    fintch_processing_core_pub.create_db_tables(table_schema,table_base_name,table_owner,srid,db_connection)
     
     parameter_sets = {
         1 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
@@ -272,11 +272,11 @@ if __name__ == "__main__":
     }
 
     #prepare jobs/job records
-    records = process_record_setup(parameter_sets, reference_plot_df, flaeche_id_column, flaeche_info_df, veg_zone_df, dhm_path, plot_radius, fintch_processing_core_diss.process_perimeter_dem, table_schema, table_base_name, cfg, result_base_path, log_path, num_processes = 1)
+    records = process_record_setup(parameter_sets, reference_plot_df, flaeche_id_column, flaeche_info_df, veg_zone_df, dhm_path, plot_radius, fintch_processing_core_pub.process_perimeter_dem, table_schema, table_base_name, cfg, result_base_path, log_path, num_processes = 1)
     #process perimeter (FST, Vegetation Zones, Terrain)
-    process_records(records,fintch_processing_core_diss.process_perimeter, num_processes = 20)
+    process_records(records,fintch_processing_core_pub.process_perimeter, num_processes = 20)
     #process detection
-    process_records(records,fintch_processing_core_diss.process_detection, num_processes = 40)
+    process_records(records,fintch_processing_core_pub.process_detection, num_processes = 40)
 
     db_connection.close()
 
