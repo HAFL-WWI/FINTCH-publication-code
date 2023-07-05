@@ -172,7 +172,7 @@ def process_records_linear(process_records, process_function, num_processes = 1)
     #Insert records into queue
     for r in process_records:
         perimeter_queue.put(r)
-        break
+        # break
 
     print("Start:")
     worker(perimeter_queue,process_function,cfg)
@@ -253,21 +253,21 @@ if __name__ == "__main__":
     fintch_processing_core_pub.create_db_tables(table_schema,table_base_name,table_owner,srid,db_connection)
     
     parameter_sets = {
-        1 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        2 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        3 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":2, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        4 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":1,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        5 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":1,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        6 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":1,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        7 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        8 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        9 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        10 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":3,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        11 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":3,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        12 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":3,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        13 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        14 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
-        15 : {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        1 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        2 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        3 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":2, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        4 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":1,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        5 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":1,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        6 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":1,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        7 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        8 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        9 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        10 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":3,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        11 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":3,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        12 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":3,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        13 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":3, "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        14 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":5, "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
+        15 : {"dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":2,  "gauss_size":7, "resize_method":"bilinear", "resize_resolution":1.5, "output_suffix":"", "preprocessing":"", "postprocessing":""},
         
     }
 
@@ -277,6 +277,13 @@ if __name__ == "__main__":
     process_records(records,fintch_processing_core_pub.process_perimeter, num_processes = 20)
     #process detection
     process_records(records,fintch_processing_core_pub.process_detection, num_processes = 40)
+
+
+    #process detection with Eysn LM + Filter preprocessing/parameterset_id:30
+    process_records(records,fintch_processing_core_pub.process_detection_eysn_lm_filter, num_processes = 40)    
+    #process detection with Kaartinen FGI_LOCM without Watershed/parameterset_id:31
+    process_records(records,fintch_processing_core_pub.process_detection_kaartinen_fgi_locm, num_processes = 40)
+
 
     db_connection.close()
 

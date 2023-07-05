@@ -37,6 +37,8 @@ import psycopg2
 from shapely.wkt import dumps, loads
 from shapely.geometry import Point, box
 from skimage.feature import peak_local_max
+from scipy.ndimage import grey_closing, convolve
+from scipy import signal
 
 # import configparser
 
@@ -1370,3 +1372,280 @@ def process_peak_local_max(record,db_connection):
     else:
         return len(coordinates)
 
+
+
+def process_detection_single(record, db_connection):
+    cursor = db_connection.cursor()
+
+    fint_controller = pyFintController()
+    logger = logging.getLogger()
+
+    table_schema = record["table_schema"]
+    table_base_name = record["table_base_name"]
+
+    perimeter_insert_template = "INSERT INTO "+table_schema+"."+table_base_name+"_perimeter(geom, perimeter_id, flaeche_id) VALUES (ST_SetSRID(ST_GeomFromText('{0}'),{1}), {2}, {3});"
+    tree_insert_template = "INSERT INTO "+table_schema+"."+table_base_name+"_tree_detected(x, y, hoehe, bhd, dominanz, geom, parameterset_id, perimeter_id, flaeche_id, hoehe_modified) VALUES ({0}, {1}, {2}, {3}, {4}, ST_SetSRID(ST_GeomFromText('{5}'),{6}), {7}, {8},{9},{10});" 
+
+    result_base_path = record["result_base_path"]
+    perimeter_buffer = record["perimeter_buffer"]
+    r_max = record["r_max"]
+    epsg = record["epsg"]
+    crs = record["crs"]
+    
+    perimeter_id = record["perimeter_id"]
+    flaeche_id = record["flaeche_id"]
+    source_id = record["quelle_id"]
+    folder_name = "{0}_{1}_{2}".format(source_id,flaeche_id,perimeter_id)
+    output_folder = os.path.join(result_base_path,folder_name)
+    if not os.path.isdir(output_folder):
+        os.mkdir(output_folder)
+
+    geom_center = record["geom_center"]
+    geom = record["geom_flaeche"]
+    (minx, miny, maxx, maxy) = geom.bounds
+
+    #Envelope by group
+    bx = box(minx, miny, maxx, maxy)
+    envelope = geom_center.buffer(perimeter_buffer, resolution=1).envelope
+
+    # sql = perimeter_insert_template.format(geom.wkt,epsg,perimeter_id,flaeche_id)
+    # cursor.execute(sql)
+    # db_connection.commit()
+
+    parameter_sets = record["parameter_sets"]
+    vhm_input_file = record["vhm_input_file"]
+
+    paramterset_id = list(parameter_sets.keys())[0]
+    parameter_set = parameter_sets[paramterset_id]
+    parameter_set["id"] = paramterset_id
+
+    fint_trees_df = detect_trees(parameter_set, output_folder, vhm_input_file, envelope, crs, fint_controller)
+    if type(fint_trees_df) == type(None):
+        return
+    else:
+        fint_trees_df["parameterset_id"] = paramterset_id
+
+    geom_bounds = geom.bounds
+    minx = geom_bounds[0]
+    miny = geom_bounds[1]
+    maxx = geom_bounds[2]
+    maxy = geom_bounds[3]
+
+    fint_trees_df = fint_trees_df[fint_trees_df["hoehe"].apply(lambda x: x.strip())!="nan"]
+    fint_trees_df["hoehe"] = fint_trees_df["hoehe"].astype(np.double)
+    fint_trees_df = fint_trees_df[(fint_trees_df["x"]>=minx) & (fint_trees_df["x"]<maxx) & (fint_trees_df["y"]>=miny) & (fint_trees_df["y"]<maxy) & (fint_trees_df.within(record["geom_flaeche"]))].copy()
+    fint_trees_df["perimeter_id"] = perimeter_id
+
+    if type(fint_trees_df)==type(None) or len(fint_trees_df) == 0:
+        cursor.close()
+        return
+    fint_trees_df["wkt"] = fint_trees_df["geometry"].apply(dumps) #reflects onto the underlying df
+
+    for tindex, ttree in fint_trees_df.iterrows():
+        sql = tree_insert_template.format(ttree["x"],ttree["y"],ttree["hoehe"],ttree["bhd"],ttree["dominanz"],ttree["wkt"],epsg,ttree["parameterset_id"],perimeter_id,flaeche_id,ttree["hoehe_modified"] if ttree["hoehe_modified"].strip() != "nan" else -1)
+        cursor.execute(sql)
+        db_connection.commit()            
+
+    cursor.close()
+
+
+
+
+def process_detection_eysn_lm_filter(record, db_connection):
+    logger = logging.getLogger()
+
+    result_base_path = record["result_base_path"]
+    perimeter_buffer = record["perimeter_buffer"]
+    r_max = record["r_max"]
+    epsg = record["epsg"]
+    crs = record["crs"]
+    
+    perimeter_id = record["perimeter_id"]
+    flaeche_id = record["flaeche_id"]
+    source_id = record["quelle_id"]
+    folder_name = "{0}_{1}_{2}".format(source_id,flaeche_id,perimeter_id)
+    output_folder = os.path.join(result_base_path,folder_name)
+    if not os.path.isdir(output_folder):
+        os.mkdir(output_folder)
+
+    geom_center = record["geom_center"]
+    geom = record["geom_flaeche"]
+    (minx, miny, maxx, maxy) = geom.bounds
+
+    #
+    # Clip VHM to later envelope+5m as input for pre-filtering
+    #
+
+    #Envelope by group (+5m )
+    bx = box(minx, miny, maxx, maxy)
+    envelope = geom_center.buffer(perimeter_buffer+5, resolution=1).envelope
+
+    vhm_input_file = record["vhm_input_file"]
+
+    #Extract VHM
+    vhm_output_file = os.path.join(output_folder,"vhm_unfiltered.tif")
+    try:
+        crop_image(vhm_input_file, vhm_output_file, [envelope]) # Nodata Value may depend on source!
+    except ValueError as ve:
+        logger.error("Parameterset_ID: eysn "+result_base_path)
+        logger.error(traceback.format_exception(*sys.exc_info()))
+        return None
+
+    #
+    # Read filter input
+    #
+
+    vhm = rasterio.open(vhm_output_file)
+
+    if (not vhm != None):
+        print( "Failed to load file {0}.".format( vhm_output_file ) )
+        return
+
+    imageHeight = vhm.height
+    imageWidth = vhm.width
+
+    nbRows = imageHeight
+    nbCols = imageWidth
+
+    transform = vhm.get_transform()
+    xPixelResolution = transform[1]
+    yPixelResolution = -transform[5]
+
+    xCoordUpperLeft = transform[0]
+    yCoordUpperLeft = transform[3]
+
+    vhm_data = vhm.read(1)
+
+    structuring_radius = 1 #Maybe reduce to 1.8 or 2, 4
+    skern1d = np.arange(-structuring_radius, structuring_radius + 1)
+    x, y = np.meshgrid(skern1d, skern1d)
+    structuring_element = (x**2 + y**2) <= structuring_radius**2
+    vhm_closed = grey_closing(vhm_data, structure=structuring_element)
+
+    #
+    # Step 2: Gauss filter
+    #
+    sigma = 0.5 #Maybe change to 1.1 0.3
+    filter_size = 3
+
+    gkern1d = signal.gaussian(filter_size, std=sigma).reshape(filter_size, 1)
+    gkern2d = np.outer(gkern1d, gkern1d)
+    gkern2d /= (2*np.pi*(sigma**2)) #Normalize
+    gkern2d
+
+    vhm_gauss = convolve(vhm_closed,gkern2d,mode='reflect')
+
+    no_data = vhm.nodata        
+    out_meta = vhm.meta.copy()
+    out_meta.update({"nodata":no_data})
+
+    #
+    # Save filtered VHM
+    #
+    vhm_modified_name = "vhm_eysn_lm_filter.tif"
+    vhm_modified_output = os.path.join(output_folder,vhm_modified_name)
+    vhm_modified = rasterio.open(vhm_modified_output, "w", **out_meta)
+    vhm_modified.write(vhm_gauss, 1)
+    vhm_modified.close()
+
+    #
+    # Modify record to use filtered VHM as input and set parameter_set to 
+    #
+    record["vhm_input_file"] = vhm_modified_output
+    record["parameter_sets"] = {30: {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":abs(xPixelResolution), "output_suffix":"", "preprocessing":"", "postprocessing":""}}
+    return process_detection_single(record,db_connection)
+
+
+def process_detection_kaartinen_fgi_locm(record, db_connection):
+    logger = logging.getLogger()
+
+    result_base_path = record["result_base_path"]
+    perimeter_buffer = record["perimeter_buffer"]
+    r_max = record["r_max"]
+    epsg = record["epsg"]
+    crs = record["crs"]
+    
+    perimeter_id = record["perimeter_id"]
+    flaeche_id = record["flaeche_id"]
+    source_id = record["quelle_id"]
+    folder_name = "{0}_{1}_{2}".format(source_id,flaeche_id,perimeter_id)
+    output_folder = os.path.join(result_base_path,folder_name)
+    if not os.path.isdir(output_folder):
+        os.mkdir(output_folder)
+
+    geom_center = record["geom_center"]
+    geom = record["geom_flaeche"]
+    (minx, miny, maxx, maxy) = geom.bounds
+
+    #
+    # Clip VHM to later envelope+5m as input for pre-filtering
+    #
+
+    #Envelope by group (+5m )
+    bx = box(minx, miny, maxx, maxy)
+    envelope = geom_center.buffer(perimeter_buffer+5, resolution=1).envelope
+
+    vhm_input_file = record["vhm_input_file"]
+
+    #Extract VHM
+    vhm_output_file = os.path.join(output_folder,"vhm_unfiltered.tif")
+    try:
+        crop_image(vhm_input_file, vhm_output_file, [envelope]) # Nodata Value may depend on source!
+    except ValueError as ve:
+        logger.error("Parameterset_ID: eysn "+result_base_path)
+        logger.error(traceback.format_exception(*sys.exc_info()))
+        return None
+
+    #
+    # Read filter input
+    #
+
+    vhm = rasterio.open(vhm_output_file)
+
+    if (not vhm != None):
+        print( "Failed to load file {0}.".format( vhm_output_file ) )
+        return
+
+    imageHeight = vhm.height
+    imageWidth = vhm.width
+
+    nbRows = imageHeight
+    nbCols = imageWidth
+
+    transform = vhm.get_transform()
+    xPixelResolution = transform[1]
+    yPixelResolution = -transform[5]
+
+    xCoordUpperLeft = transform[0]
+    yCoordUpperLeft = transform[3]
+
+    vhm_data = vhm.read(1)
+
+    #
+    # Step 1: Lowpass filter
+    #
+
+    filter_kernel = 1/28 * np.array([[1, 3, 1], [3, 12, 3], [1, 3, 1]])
+    vhm_lowpass = convolve(vhm_data,filter_kernel,mode='reflect')
+
+    vhm_lowpass[vhm_lowpass <= 2] = 0 
+
+    no_data = vhm.nodata        
+    out_meta = vhm.meta.copy()
+    out_meta.update({"nodata":no_data})
+
+    #
+    # Save filtered VHM
+    #
+    vhm_modified_name = "vhm_kaartinnen_fgi_locm.tif"
+    vhm_modified_output = os.path.join(output_folder,vhm_modified_name)
+    vhm_modified = rasterio.open(vhm_modified_output, "w", **out_meta)
+    vhm_modified.write(vhm_lowpass, 1)
+    vhm_modified.close()
+
+    #
+    # Modify record to use filtered VHM as input and set parameter_set to 
+    #
+    record["vhm_input_file"] = vhm_modified_output
+    record["parameter_sets"] = {31: {"vhm_source":"VHM_ALS", "dbh_function":"2.52*H^0.84", "randomized":False, "random_variance":0, "altitutde_allowed":False, "minimum_detection_tree_height":1, "minimum_tree_height":3, "gauss_sigma":"",  "gauss_size":"", "resize_method":"bilinear", "resize_resolution":abs(xPixelResolution), "output_suffix":"", "preprocessing":"", "postprocessing":""}}
+    return process_detection_single(record,db_connection)
